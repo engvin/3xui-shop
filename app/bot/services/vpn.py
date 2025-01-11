@@ -170,7 +170,7 @@ class VPNService:
         enable: bool = True,
         flow: str = "xtls-rprx-vision",
         total_gb: int = 0,
-        inbound_id: int = 7,  # TODO: Make a server config
+        inbound_id: int = 1,  # TODO: Make a server config
     ) -> bool:
         logger.info(f"Creating new client {user.user_id} | {devices} devices {duration} days.")
         new_client = Client(
