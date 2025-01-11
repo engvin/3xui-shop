@@ -41,16 +41,16 @@ def download_keyboard(platform: NavDownload, key: str) -> InlineKeyboardMarkup:
     # v2raytun://import/ | hiddify://import/ #TODO: TinyUrl not work in Russia "https://tinyurl.com/bbpy5bx7/{key}" "https://tinyurl.com/5cea6ra4/{key}"
     if platform == NavDownload.PLATFORM_IOS:
         download = "https://apps.apple.com/us/app/hiddify-proxy-vpn/id6596777532"
-        connect = f"hiddify://import/{key}"
+        connect = f"https://tinyurl.com/5cea6ra4/{key}"
     elif platform == NavDownload.PLATFORM_ANDROID:
         download = "https://play.google.com/store/apps/details?id=app.hiddify.com"
-        connect = f"hiddify://import/{key}"
+        connect = f"https://tinyurl.com/5cea6ra4/{key}"
     else:
         download = (
             "https://github.com/hiddify/hiddify-next/releases/download/"
             + "v2.5.7/Hiddify-Windows-Setup-x64.exe"
         )
-        connect = f"hiddify://import/{key}"
+        connect = f"https://tinyurl.com/5cea6ra4/{key}"
 
     builder.row(
         InlineKeyboardButton(text=_("📥 Download"), url=download),
