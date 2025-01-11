@@ -180,7 +180,7 @@ class VPNService:
             expiry_time=self._days_to_timestamp(duration),
             flow=flow,
             limit_ip=devices,
-            sub_id=user.vpn_id,
+            sub_id=f"SafeRay🇳🇱NL-{user.user_id}", #sub_id=user.vpn_id,
             total_gb=total_gb,
         )
         """
@@ -260,7 +260,7 @@ class VPNService:
             client.expiry_time = expiry_time
             client.flow = flow
             client.limit_ip = devices
-            client.sub_id = user.vpn_id
+            client.sub_id = f"SafeRay🇳🇱NL-{user.user_id}"
             client.total_gb = total_gb
 
             await self.api.client.update(client.id, client)
