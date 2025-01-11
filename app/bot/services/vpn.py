@@ -158,7 +158,7 @@ class VPNService:
         """
         async with self.session() as session:
             user: User = await User.get(session, user_id=user_id)
-        key = user.sub_id # key = f"{self.subscription}{user.vpn_id}"
+        key = f"{self.subscription}{user.sub_id}"
         logger.debug(f"Fetched key for {user_id}: {key}.")
         return key
 
