@@ -15,3 +15,5 @@ services:
       poetry run pybabel compile -d /app/locales -D bot &&
       poetry run alembic -c /app/db/alembic.ini upgrade head &&
       poetry run python /app/__main__.py"
+    ports:
+      - "8080:8080"
