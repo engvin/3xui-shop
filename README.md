@@ -62,15 +62,20 @@ Before starting the installation, make sure you have the installed [**Docker**](
 | Variable | Description |
 |-|-|
 | BOT_TOKEN | Telegram bot token |
-| BOT_ADMINS | List of admin IDs (Telegram user IDs)
+| BOT_ADMINS | List of admin IDs (Telegram user IDs) |
 | BOT_DEV_ID | Telegram user ID of the bot developer |
 | BOT_SUPPORT_ID | Telegram user ID of the support person |
+| BOT_WEBHOOK | URL for the webhook to receive updates from Telegram |
+| BOT_WEBHOOK_PORT | Port for the webhook service (def. 8080) |
 | | |
 | XUI_HOST | URL of the 3X-UI control panel (e.g., https://example.com/panel/) |
 | XUI_USERNAME | Username for authentication in the 3X-UI control panel |
 | XUI_PASSWORD | Password for authentication in the 3X-UI control panel |
 | XUI_TOKEN | Token for authentication (if configured in the panel settings) |
 | XUI_SUBSCRIPTION | URL for the subscription page (e.g., https://sub.example.com/user/) |
+| | |
+| YOOKASSA_TOKEN | API token for YooKassa |
+| YOOKASSA_SHOP_ID | Shop ID for YooKassa |
 | | |
 | LOG_LEVEL | Log level (e.g., INFO, DEBUG) |
 | LOG_ARCHIVE_FORMAT | Log archive format (e.g., zip, gz) |
