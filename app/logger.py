@@ -125,6 +125,7 @@ def setup_logging(config: LoggingConfig) -> None:
                 backupCount=7,
                 encoding="utf-8",
                 archive_format=config.ARCHIVE_FORMAT,
+                utc=False,
             ),
             logging.StreamHandler(),
         ],
