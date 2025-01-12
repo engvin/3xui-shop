@@ -3,7 +3,7 @@ import logging
 import os
 import shutil
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from logging.handlers import TimedRotatingFileHandler
 
 from app.config import LoggingConfig
@@ -119,7 +119,7 @@ def setup_logging(config: LoggingConfig) -> None:
         format=config.FORMAT,
         handlers=[
             CompressingFileHandler(
-                filename=os.path.join(log_dir, f"{datetime.now(timezone.utc).date()}.log"),
+                filename=os.path.join(log_dir, f"{datetime.now(timezone(timedelta(hours=3))).date()}.log"),
                 when="midnight",
                 interval=1,
                 backupCount=7,
