@@ -11,7 +11,7 @@ DEFAULT_PLANS_DIR = DEFAULT_DATA_DIR / "plans.json"
 
 DEFAULT_DB_NAME = "bot_database"
 
-DEFAULT_LOG_LEVEL = "INFO"
+DEFAULT_LOG_LEVEL = "DEBUG"
 DEFAULT_LOG_FORMAT = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
 DEFAULT_LOG_DIR = "logs"
 DEFAULT_LOG_ARCHIVE_FORMAT = "zip"
