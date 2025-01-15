@@ -114,9 +114,6 @@ def setup_logging(config: LoggingConfig) -> None:
     log_dir = config.DIR
     os.makedirs(log_dir, exist_ok=True)
 
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)  # Устанавливаем уровень DEBUG для консоли
-
     logging.basicConfig(
         level=getattr(logging, config.LEVEL.upper(), logging.INFO),
         format=config.FORMAT,
@@ -130,7 +127,7 @@ def setup_logging(config: LoggingConfig) -> None:
                 archive_format=config.ARCHIVE_FORMAT,
                 utc=False,
             ),
-            console_handler,
+            logging.StreamHandler(),
         ],
     )
 
