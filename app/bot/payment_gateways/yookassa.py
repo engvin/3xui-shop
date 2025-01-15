@@ -1,4 +1,5 @@
 import logging
+import json
 
 from aiogram import Bot
 from aiogram.utils.i18n import gettext as _
@@ -156,6 +157,12 @@ class Yookassa(PaymentGateway):
             return web.Response(status=403)
 
         event_json = await request.json()
+
+        try:
+            logger.info(f"Received webhook: {json.dumps(event_json, indent=4)}")
+        except Exception as log_error:
+            logger.error(f"Failed to log webhook data: {log_error}")
+
         try:
             notification_object = WebhookNotificationFactory().create(event_json)
             response_object = notification_object.object
@@ -180,6 +187,7 @@ class Yookassa(PaymentGateway):
                 #         "paymentStatus": response_object.status,
                 #     }
                 case _:
+                    logger.warning(f"Unhandled event type: {notification_object.event}")
                     return web.Response(status=400)
 
             payment_info = Payment.find_one(some_data["paymentId"])
@@ -240,6 +248,7 @@ class Yookassa(PaymentGateway):
 
         except Exception as exception:
             print(exception)
+            logger.error(f"Error processing webhook: {exception}")
             return web.Response(status=400)
 
         return web.Response(status=200)
