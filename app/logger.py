@@ -118,7 +118,7 @@ def setup_logging(config: LoggingConfig) -> None:
     console_handler.setLevel(logging.DEBUG)  # Устанавливаем уровень DEBUG для консоли
 
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=getattr(logging, config.LEVEL.upper(), logging.INFO),
         format=config.FORMAT,
         handlers=[
             CompressingFileHandler(
