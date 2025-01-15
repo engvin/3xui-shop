@@ -131,10 +131,6 @@ def setup_logging(config: LoggingConfig) -> None:
         ],
     )
 
-    logging.debug("Logging level DEBUG")
-    logging.info("Logging level INFO")
-    logging.warning("Logging level WARNING")
-
     # Suppress logs to avoid unnecessary output
     aiogram_logger = logging.getLogger("aiogram.event")
     aiogram_logger.setLevel(logging.CRITICAL)
