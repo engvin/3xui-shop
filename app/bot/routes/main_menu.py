@@ -52,8 +52,11 @@ async def command_main_menu(message: Message, state: FSMContext) -> None:
     previous_message_id = await state.get_value("message_id")
 
     if previous_message_id:
-        await message.bot.delete_message(message.chat.id, previous_message_id)
-        await state.clear()
+        try:
+            await message.bot.delete_message(message.chat.id, previous_message_id)
+            await state.clear()
+        except:
+            logger.error(f"Error: Main Menu - msgChatId{message.chat.id}, prev_msgId{previous_message_id}")
 
     is_admin = await IsAdmin()(message)
     main_menu_message = await message.answer(
