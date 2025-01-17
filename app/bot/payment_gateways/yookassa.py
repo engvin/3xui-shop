@@ -198,7 +198,10 @@ class Yookassa(PaymentGateway):
                 async with session() as session:
                     transaction = await Transaction.get(session=session, payment_id=payment_info.id)
                 data = SubscriptionData.unpack(transaction.plan)
-                await bot.delete_message(chat_id=data.user_id, message_id=data.message_id)
+                try:
+                    await bot.delete_message(chat_id=data.user_id, message_id=data.message_id)
+                except Exception as e:
+                    logger.warning(f"Couldn't delete message with ID {data.message_idd}: {e}")
                 if data.is_extend:
                     await vpn_service.extend_subscription(data.user_id, data.devices, data.duration)
                     logger.info(f"Subscription extented for user {data.user_id}")

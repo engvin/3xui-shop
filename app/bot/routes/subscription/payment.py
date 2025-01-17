@@ -128,7 +128,10 @@ async def successful_payment(
             telegram_payment_charge_id=message.successful_payment.telegram_payment_charge_id,
         )
 
-    await bot.delete_message(chat_id=message.chat.id, message_id=data.message_id)
+    try:
+        await bot.delete_message(chat_id=message.chat.id, message_id=data.message_id)
+    except Exception as e:
+        logger.warning(f"Couldn't delete message with ID {data.message_idd}: {e}")
     # await bot.edit_message_text(
     #     text="Successful payment!",
     #     chat_id=message.chat.id,
