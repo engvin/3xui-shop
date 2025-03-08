@@ -1,44 +1,153 @@
+import logging
 from abc import ABC, abstractmethod
 
+import requests
 from aiogram import Bot
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.fsm.storage.redis import RedisStorage
+from aiogram.utils.i18n import I18n
+from aiogram.utils.i18n import gettext as _
+from aiogram.utils.i18n import lazy_gettext as __
+from aiohttp.web import Application
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.bot.navigation import SubscriptionData
+from app.bot.models import ServicesContainer, SubscriptionData
+from app.bot.routers.main_menu.handler import redirect_to_main_menu
+from app.bot.utils.constants import (
+    DEFAULT_LANGUAGE,
+    EVENT_PAYMENT_CANCELED_TAG,
+    EVENT_PAYMENT_SUCCEEDED_TAG,
+    Currency,
+    TransactionStatus,
+)
+from app.bot.utils.formatting import format_device_count, format_subscription_period
+from app.config import Config
+from app.db.models import Transaction, User
+
+logger = logging.getLogger(__name__)
+
+from app.bot.models import SubscriptionData
+from app.bot.utils.constants import Currency
 
 
 class PaymentGateway(ABC):
-    """
-    Abstract base class for payment gateways.
-
-    Each gateway should implement its own version of the methods defined here.
-
-    Attributes:
-        name (str): Name of the payment gateway.
-        symbol (str): The symbol used for the payment.
-        code (str): The payment code.
-        callback (str): The callback string for payment status.
-    """
-
     name: str
-    symbol: str
-    code: str
-    callback = str
+    currency: Currency
+    callback: str
+
+    def __init__(
+        self,
+        app: Application,
+        config: Config,
+        session: async_sessionmaker,
+        storage: RedisStorage,
+        bot: Bot,
+        i18n: I18n,
+        services: ServicesContainer,
+    ):
+        self.app = app
+        self.config = config
+        self.session = session
+        self.storage = storage
+        self.bot = bot
+        self.i18n = i18n
+        self.services = services
 
     @abstractmethod
-    async def create_payment(
-        self,
-        session: AsyncSession,
-        data: SubscriptionData,
-        bot: Bot = None,
-    ) -> str:
-        """
-        Create a payment link or handle the payment process.
-
-        Arguments:
-            data (SubscriptionData): The subscription or payment data, including plan details.
-            bot (Bot | None): Optional bot instance, required for gateways like TelegramStars.
-
-        Returns:
-            str: The payment link or confirmation, depending on the payment gateway.
-        """
+    async def create_payment(self, data: SubscriptionData) -> str:
         pass
+
+    @abstractmethod
+    async def handle_payment_succeeded(self, payment_id: str) -> None:
+        pass
+
+    @abstractmethod
+    async def handle_payment_canceled(self, payment_id: str) -> None:
+        pass
+
+    async def _on_payment_succeeded(self, payment_id: str) -> None:
+        logger.info(f"Payment succeeded {payment_id}")
+
+        async with self.session() as session:
+            transaction = await Transaction.get_by_id(session=session, payment_id=payment_id)
+            data = SubscriptionData.unpack(transaction.subscription)
+            logger.debug(f"Subscription data unpacked: {data}")
+            user = await User.get(session=session, tg_id=data.user_id)
+
+            await Transaction.update(
+                session=session,
+                payment_id=payment_id,
+                status=TransactionStatus.COMPLETED,
+            )
+
+        await self.services.notification.notify_developer(
+            text=EVENT_PAYMENT_SUCCEEDED_TAG
+            + "\n\n"
+            + _("payment:event:payment_succeeded").format(
+                payment_id=payment_id,
+                user_id=user.tg_id,
+                devices=format_device_count(data.devices),
+                duration=format_subscription_period(data.duration),
+            ),
+        )
+
+        locale = user.language_code if user else DEFAULT_LANGUAGE
+        with self.i18n.use_locale(locale):
+            await redirect_to_main_menu(bot=self.bot, user=user, storage=self.storage)
+
+            if data.is_extend:
+                await self.services.vpn.extend_subscription(
+                    user=user,
+                    devices=data.devices,
+                    duration=data.duration,
+                )
+                logger.info(f"Subscription extended for user {user.tg_id}")
+                await self.services.notification.notify_extend_success(
+                    user_id=user.tg_id,
+                    data=data,
+                )
+            elif data.is_change:
+                await self.services.vpn.change_subscription(
+                    user=user,
+                    devices=data.devices,
+                    duration=data.duration,
+                )
+                logger.info(f"Subscription changed for user {user.tg_id}")
+                await self.services.notification.notify_change_success(
+                    user_id=user.tg_id,
+                    data=data,
+                )
+            else:
+                await self.services.vpn.create_subscription(
+                    user=user,
+                    devices=data.devices,
+                    duration=data.duration,
+                )
+                logger.info(f"Subscription created for user {user.tg_id}")
+                key = await self.services.vpn.get_key(user)
+                await self.services.notification.notify_purchase_success(
+                    user_id=user.tg_id,
+                    key=key,
+                )
+
+    async def _on_payment_canceled(self, payment_id: str) -> None:
+        logger.info(f"Payment canceled {payment_id}")
+        async with self.session() as session:
+            transaction = await Transaction.get_by_id(session=session, payment_id=payment_id)
+            data = SubscriptionData.unpack(transaction.subscription)
+
+            await Transaction.update(
+                session=session,
+                payment_id=payment_id,
+                status=TransactionStatus.CANCELED,
+            )
+
+        await self.services.notification.notify_developer(
+            text=EVENT_PAYMENT_CANCELED_TAG
+            + "\n\n"
+            + _("payment:event:payment_canceled").format(
+                payment_id=payment_id,
+                user_id=data.user_id,
+                devices=format_device_count(data.devices),
+                duration=format_subscription_period(data.duration),
+            ),
+        )
