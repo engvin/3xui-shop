@@ -15,6 +15,7 @@ class NavProfile(str, Enum):
 
 class NavReferral(str, Enum):
     MAIN = "referral"
+    GET_REFERRED_TRIAL = "get_referral_trial"
 
 
 class NavSupport(str, Enum):
@@ -39,11 +40,13 @@ class NavSubscription(str, Enum):
     DEVICES = "devices"
     DURATION = "duration"
     PROMOCODE = "promocode"
+    GET_TRIAL = "get_trial"
 
     PAY = "pay"
     PAY_YOOKASSA = f"{PAY}_yookassa"
     PAY_TELEGRAM_STARS = f"{PAY}_telegram_stars"
     PAY_CRYPTOMUS = f"{PAY}_cryptomus"
+    PAY_HELEKET = f"{PAY}_heleket"
     PAY_YOOMONEY = f"{PAY}_yoomoney"
     BACK_TO_DURATION = "back_to_duration"
     BACK_TO_PAYMENT = "back_to_payment"
@@ -63,6 +66,15 @@ class NavAdminTools(str, Enum):
     SYNC_SERVERS = "sync_servers"
     STATISTICS = "statistics"
     USER_EDITOR = "user_editor"
+
+    INVITE_EDITOR = "invite_editor"
+    CREATE_INVITE = "create_invite"
+    DELETE_INVITE = "delete_invite"
+    LIST_INVITES = "list_invites"
+    SHOW_INVITE_PAGE = "show_invite_page"
+    SHOW_INVITE_DETAILS = "show_invite_details"
+    TOGGLE_INVITE_STATUS = "toggle_invite_status"
+    CONFIRM_DELETE_INVITE = "confirm_delete_invite"
 
     PROMOCODE_EDITOR = "promocode_editor"
     CREATE_PROMOCODE = "create_promocode"

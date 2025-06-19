@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from app.bot.utils.network import extract_base_url
-from app.config import Config
-
 if TYPE_CHECKING:
     from .server_pool import ServerPoolService
 
@@ -14,11 +11,13 @@ from py3xui import Client, Inbound
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bot.models import ClientData
+from app.bot.utils.network import extract_base_url
 from app.bot.utils.time import (
     add_days_to_timestamp,
     days_to_timestamp,
     get_current_timestamp,
 )
+from app.config import Config
 from app.db.models import Promocode, User
 
 logger = logging.getLogger(__name__)
@@ -247,7 +246,23 @@ class VPNService:
             )
         return False
 
+    async def process_bonus_days(self, user: User, duration: int, devices: int) -> bool:
+        if await self.is_client_exists(user):
+            updated = await self.update_client(user=user, devices=0, duration=duration)
+            if updated:
+                logger.info(f"Updated client {user.tg_id} with additional {duration} days(-s).")
+                return True
+        else:
+            created = await self.create_client(user=user, devices=devices, duration=duration)
+            if created:
+                logger.info(f"Created client {user.tg_id} with additional {duration} days(-s)")
+                return True
+
+        return False
+
     async def activate_promocode(self, user: User, promocode: Promocode) -> bool:
+        # TODO: consider moving to some 'promocode module services' with usage of vpn-service methods.
+
         async with self.session() as session:
             activated = await Promocode.set_activated(
                 session=session,
@@ -259,16 +274,15 @@ class VPNService:
             logger.critical(f"Failed to activate promocode {promocode.code} for user {user.tg_id}.")
             return False
 
-        if await self.is_client_exists(user):
-            updated = await self.update_client(user=user, devices=0, duration=promocode.duration)
-            if updated:
-                logger.info(f"Updated client {user.tg_id} with promocode {promocode.code}.")
-                return True
-        else:
-            created = await self.create_client(user=user, devices=1, duration=promocode.duration)
-            if created:
-                logger.info(f"Created client {user.tg_id} with promocode {promocode.code}.")
-                return True
+        logger.info(f"Begun applying promocode ({promocode.code}) to a client {user.tg_id}.")
+        success = await self.process_bonus_days(
+            user,
+            duration=promocode.duration,
+            devices=self.config.shop.BONUS_DEVICES_COUNT,
+        )
+
+        if success:
+            return True
 
         async with self.session() as session:
             await Promocode.set_deactivated(session=session, code=promocode.code)

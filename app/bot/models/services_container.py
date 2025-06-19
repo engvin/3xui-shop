@@ -8,6 +8,10 @@ if TYPE_CHECKING:
         PlanService,
         ServerPoolService,
         VPNService,
+        ReferralService,
+        SubscriptionService,
+        PaymentStatsService,
+        InviteStatsService,
     )
 
 from dataclasses import dataclass
@@ -19,3 +23,7 @@ class ServicesContainer:
     plan: PlanService
     vpn: VPNService
     notification: NotificationService
+    referral: ReferralService
+    subscription: SubscriptionService
+    payment_stats: PaymentStatsService
+    invite_stats: InviteStatsService

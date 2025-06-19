@@ -4,13 +4,14 @@ from logging.handlers import MemoryHandler
 from pathlib import Path
 
 from environs import Env
-from marshmallow.validate import OneOf
+from marshmallow.validate import OneOf, Range
 
 from app.bot.utils.constants import (
     DB_FORMAT,
     LOG_GZ_ARCHIVE_FORMAT,
     LOG_ZIP_ARCHIVE_FORMAT,
     Currency,
+    ReferrerRewardType,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -25,8 +26,18 @@ DEFAULT_SHOP_EMAIL = "support@3xui-shop.com"
 DEFAULT_SHOP_CURRENCY = Currency.RUB.code
 DEFAULT_SHOP_TRIAL_ENABLED = True
 DEFAULT_SHOP_TRIAL_PERIOD = 3
+DEFAULT_SHOP_REFERRED_TRIAL_ENABLED = False
+DEFAULT_SHOP_REFERRED_TRIAL_PERIOD = 7
+DEFAULT_SHOP_REFERRER_REWARD_ENABLED = True
+DEFAULT_SHOP_REFERRER_REWARD_TYPE = ReferrerRewardType.DAYS.value
+DEFAULT_SHOP_REFERRER_LEVEL_ONE_PERIOD = 10
+DEFAULT_SHOP_REFERRER_LEVEL_TWO_PERIOD = 3
+DEFAULT_SHOP_REFERRER_LEVEL_ONE_RATE = 50
+DEFAULT_SHOP_REFERRER_LEVEL_TWO_RATE = 5
+DEFAULT_SHOP_BONUS_DEVICES_COUNT = 1
 DEFAULT_SHOP_PAYMENT_STARS_ENABLED = True
 DEFAULT_SHOP_PAYMENT_CRYPTOMUS_ENABLED = False
+DEFAULT_SHOP_PAYMENT_HELEKET_ENABLED = False
 DEFAULT_SHOP_PAYMENT_YOOKASSA_ENABLED = False
 DEFAULT_SHOP_PAYMENT_YOOMONEY_ENABLED = False
 DEFAULT_DB_NAME = "bot_database"
@@ -65,8 +76,18 @@ class ShopConfig:
     CURRENCY: str
     TRIAL_ENABLED: bool
     TRIAL_PERIOD: int
+    REFERRED_TRIAL_ENABLED: bool
+    REFERRED_TRIAL_PERIOD: int
+    REFERRER_REWARD_ENABLED: bool
+    REFERRER_REWARD_TYPE: str
+    REFERRER_LEVEL_ONE_PERIOD: int
+    REFERRER_LEVEL_TWO_PERIOD: int
+    REFERRER_LEVEL_ONE_RATE: int
+    REFERRER_LEVEL_TWO_RATE: int
+    BONUS_DEVICES_COUNT: int
     PAYMENT_STARS_ENABLED: bool
     PAYMENT_CRYPTOMUS_ENABLED: bool
+    PAYMENT_HELEKET_ENABLED: bool
     PAYMENT_YOOKASSA_ENABLED: bool
     PAYMENT_YOOMONEY_ENABLED: bool
 
@@ -85,6 +106,10 @@ class CryptomusConfig:
     API_KEY: str | None
     MERCHANT_ID: str | None
 
+@dataclass
+class HeleketConfig:
+    API_KEY: str | None
+    MERCHANT_ID: str | None
 
 @dataclass
 class YooKassaConfig:
@@ -139,6 +164,7 @@ class Config:
     shop: ShopConfig
     xui: XUIConfig
     cryptomus: CryptomusConfig
+    heleket: HeleketConfig
     yookassa: YooKassaConfig
     yoomoney: YooMoneyConfig
     database: DatabaseConfig
@@ -176,6 +202,19 @@ def load_config() -> Config:
             )
             payment_cryptomus_enabled = False
 
+    payment_heleket_enabled = env.bool(
+        "SHOP_PAYMENT_HELEKET_ENABLED",
+        default=DEFAULT_SHOP_PAYMENT_HELEKET_ENABLED,
+    )
+    if payment_heleket_enabled:
+        heleket_api_key = env.str("HELEKET_API_KEY", default=None)
+        heleket_merchant_id = env.str("HELEKET_MERCHANT_ID", default=None)
+        if not heleket_api_key or not heleket_merchant_id:
+            logger.error(
+                "HELEKET_API_KEY or HELEKET_MERCHANT_ID is not set. Payment Heleket is disabled."
+            )
+            payment_heleket_enabled = False
+
     payment_yookassa_enabled = env.bool(
         "SHOP_PAYMENT_YOOKASSA_ENABLED",
         default=DEFAULT_SHOP_PAYMENT_YOOKASSA_ENABLED,
@@ -205,11 +244,29 @@ def load_config() -> Config:
     if (
         not payment_stars_enabled
         and not payment_cryptomus_enabled
+        and not payment_heleket_enabled
         and not payment_yookassa_enabled
         and not payment_yoomoney_enabled
     ):
         logger.warning("No payment methods are enabled. Enabling Stars payment method.")
         payment_stars_enabled = True
+
+    referrer_reward_type = env.str(
+        "SHOP_REFERRED_REWARD_TYPE",
+        default=DEFAULT_SHOP_REFERRER_REWARD_TYPE,
+        validate=OneOf(
+            [reward_type.value for reward_type in ReferrerRewardType],
+            error="SHOP_REFERRER_REWARD_TYPE must be one of: {choices}",
+        ),
+    )
+    referrer_reward_enabled = env.bool(
+        "SHOP_REFERRER_REWARD_ENABLED", default=DEFAULT_SHOP_REFERRER_REWARD_ENABLED
+    )
+    if referrer_reward_type != ReferrerRewardType.DAYS.value:
+        logger.error(
+            "Only 'days' option is now available for SHOP_REFERRER_REWARD_TYPE. Referrer reward disabled."
+        )
+        referrer_reward_enabled = False
 
     return Config(
         bot=BotConfig(
@@ -233,8 +290,50 @@ def load_config() -> Config:
             ).upper(),
             TRIAL_ENABLED=env.bool("SHOP_TRIAL_ENABLED", default=DEFAULT_SHOP_TRIAL_ENABLED),
             TRIAL_PERIOD=env.int("SHOP_TRIAL_PERIOD", default=DEFAULT_SHOP_TRIAL_PERIOD),
+            REFERRED_TRIAL_ENABLED=env.bool(
+                "SHOP_REFERRED_TRIAL_ENABLED", default=DEFAULT_SHOP_REFERRED_TRIAL_ENABLED
+            ),
+            REFERRED_TRIAL_PERIOD=env.int(
+                "SHOP_REFERRED_TRIAL_PERIOD",
+                default=DEFAULT_SHOP_REFERRED_TRIAL_PERIOD,
+                validate=Range(min=1, error="SHOP_REFERRED_TRIAL_PERIOD must be >= 1"),
+            ),
+            REFERRER_REWARD_ENABLED=referrer_reward_enabled,
+            REFERRER_REWARD_TYPE=referrer_reward_type,
+            REFERRER_LEVEL_ONE_PERIOD=env.int(
+                "SHOP_REFERRER_LEVEL_ONE_PERIOD",
+                default=DEFAULT_SHOP_REFERRER_LEVEL_ONE_PERIOD,
+                validate=Range(min=1, error="SHOP_REFERRER_LEVEL_ONE_PERIOD must be >= 1"),
+            ),
+            REFERRER_LEVEL_TWO_PERIOD=env.int(
+                "SHOP_REFERRER_LEVEL_TWO_PERIOD",
+                default=DEFAULT_SHOP_REFERRER_LEVEL_TWO_PERIOD,
+                validate=Range(min=1, error="SHOP_REFERRER_LEVEL_TWO_PERIOD must be >= 1"),
+            ),
+            REFERRER_LEVEL_ONE_RATE=env.int(
+                "SHOP_REFERRER_LEVEL_ONE_RATE",
+                default=DEFAULT_SHOP_REFERRER_LEVEL_ONE_RATE,
+                validate=Range(
+                    min=1,
+                    max=100,
+                    error="SHOP_REFERRER_LEVEL_ONE_RATE must be between 1 and 100",
+                ),
+            ),
+            REFERRER_LEVEL_TWO_RATE=env.int(
+                "SHOP_REFERRER_LEVEL_TWO_RATE",
+                default=DEFAULT_SHOP_REFERRER_LEVEL_TWO_RATE,
+                validate=Range(
+                    min=1,
+                    max=100,
+                    error="SHOP_REFERRER_LEVEL_TWO_RATE must be between 1 and 100",
+                ),
+            ),
+            BONUS_DEVICES_COUNT=env.int(
+                "SHOP_BONUS_DEVICES_COUNT", default=DEFAULT_SHOP_BONUS_DEVICES_COUNT
+            ),
             PAYMENT_STARS_ENABLED=payment_stars_enabled,
             PAYMENT_CRYPTOMUS_ENABLED=payment_cryptomus_enabled,
+            PAYMENT_HELEKET_ENABLED=payment_heleket_enabled,
             PAYMENT_YOOKASSA_ENABLED=payment_yookassa_enabled,
             PAYMENT_YOOMONEY_ENABLED=payment_yoomoney_enabled,
         ),
@@ -251,6 +350,10 @@ def load_config() -> Config:
         cryptomus=CryptomusConfig(
             API_KEY=env.str("CRYPTOMUS_API_KEY", default=None),
             MERCHANT_ID=env.str("CRYPTOMUS_MERCHANT_ID", default=None),
+        ),
+        heleket=HeleketConfig(
+            API_KEY=env.str("HELEKET_API_KEY", default=None),
+            MERCHANT_ID=env.str("HELEKET_MERCHANT_ID", default=None),
         ),
         yookassa=YooKassaConfig(
             TOKEN=env.str("YOOKASSA_TOKEN", default=None),

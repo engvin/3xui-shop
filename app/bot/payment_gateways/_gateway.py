@@ -1,7 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
 
-import requests
 from aiogram import Bot
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.utils.i18n import I18n
@@ -43,7 +42,7 @@ class PaymentGateway(ABC):
         bot: Bot,
         i18n: I18n,
         services: ServicesContainer,
-    ):
+    ) -> None:
         self.app = app
         self.config = config
         self.session = session
@@ -79,6 +78,13 @@ class PaymentGateway(ABC):
                 status=TransactionStatus.COMPLETED,
             )
 
+        if self.config.shop.REFERRER_REWARD_ENABLED:
+            await self.services.referral.add_referrers_rewards_on_payment(
+                referred_tg_id=data.user_id,
+                payment_amount=data.price,  # TODO: (!) add currency unified processing
+                payment_id=payment_id,
+            )
+
         await self.services.notification.notify_developer(
             text=EVENT_PAYMENT_SUCCEEDED_TAG
             + "\n\n"
@@ -92,7 +98,13 @@ class PaymentGateway(ABC):
 
         locale = user.language_code if user else DEFAULT_LANGUAGE
         with self.i18n.use_locale(locale):
-            await redirect_to_main_menu(bot=self.bot, user=user, storage=self.storage)
+            await redirect_to_main_menu(
+                bot=self.bot,
+                user=user,
+                services=self.services,
+                config=self.config,
+                storage=self.storage,
+            )
 
             if data.is_extend:
                 await self.services.vpn.extend_subscription(

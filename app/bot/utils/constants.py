@@ -1,14 +1,13 @@
 # region: Download
-APP_IOS_LINK = "https://apps.apple.com/ru/app/v2raytun/id6476628951"
-APP_ANDROID_LINK = "https://play.google.com/store/apps/details?id=com.v2raytun.android"
+APP_IOS_LINK = "https://apps.apple.com/us/app/happ-proxy-utility/id6504287215"
+APP_ANDROID_LINK = "https://play.google.com/store/apps/details?id=com.happproxy"
 APP_WINDOWS_LINK = (
-    "https://github.com/hiddify/hiddify-next/releases/download/"
-    "v2.0.5/Hiddify-Windows-Setup-x64.exe"
+    "https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x86.exe"
 )
 
-APP_IOS_SCHEME = "v2raytun://import/"
-APP_ANDROID_SCHEME = "v2raytun://import/"
-APP_WINDOWS_SCHEME = "hiddify://import/"
+APP_IOS_SCHEME = "happ://add/"
+APP_ANDROID_SCHEME = "happ://add/"
+APP_WINDOWS_SCHEME = "happ://add/"
 
 # endregion
 
@@ -32,6 +31,7 @@ NOTIFICATION_PRE_MESSAGE_TEXT_KEY = "notification_pre_message_text"
 TELEGRAM_WEBHOOK = "/webhook"  # Webhook path for Telegram bot updates
 CONNECTION_WEBHOOK = "/connection"  # Webhook path for receiving connection requests
 CRYPTOMUS_WEBHOOK = "/cryptomus"  # Webhook path for receiving Cryptomus payment notifications
+HELEKET_WEBHOOK = "/heleket"  # Webhook path for receiving Heleket payment notifications
 YOOKASSA_WEBHOOK = "/yookassa"  # Webhook path for receiving Yookassa payment notifications
 YOOMONEY_WEBHOOK = "/yoomoney"  # Webhook path for receiving Yoomoney payment notifications
 # endregion
@@ -66,6 +66,7 @@ MESSAGE_EFFECT_IDS = {
 
 # region: Enums
 from enum import Enum
+from typing import Any, Optional
 
 
 class TransactionStatus(Enum):
@@ -81,11 +82,11 @@ class Currency(Enum):
     XTR = ("XTR", "★")
 
     @property
-    def symbol(self):
+    def symbol(self) -> str:
         return self.value[1]
 
     @property
-    def code(self):
+    def code(self) -> str:
         return self.value[0]
 
     @classmethod
@@ -95,6 +96,33 @@ class Currency(Enum):
             if currency.code == code:
                 return currency
         raise ValueError(f"Invalid currency code: {code}")
+
+
+class ReferrerRewardType(Enum):
+    DAYS = "days"
+    MONEY = "money"  # TODO: consider using currencies instead? depends on balance implementation
+
+    @classmethod
+    def from_str(cls, value: str) -> Optional["ReferrerRewardType"]:
+        try:
+            return cls[value.upper()]
+        except KeyError:
+            try:
+                return cls(value.lower())
+            except ValueError:
+                return None
+
+
+class ReferrerRewardLevel(Enum):
+    FIRST_LEVEL = 1
+    SECOND_LEVEL = 2
+
+    @classmethod
+    def from_value(cls, value: Any) -> Optional["ReferrerRewardLevel"]:
+        try:
+            return cls(int(value))
+        except (ValueError, KeyError):
+            return None
 
 
 # endregion
