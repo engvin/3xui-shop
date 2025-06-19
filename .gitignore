@@ -174,3 +174,5 @@ cython_debug/
 plans.json
 
 tmp_test/
+app/locales/en/LC_MESSAGES/overrides.po
+app/locales/ru/LC_MESSAGES/overrides.po
